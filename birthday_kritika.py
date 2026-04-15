@@ -594,7 +594,7 @@ st.markdown("""
     Wishing you the most magical birthday ever. May this year bring you everything
     you've ever wished for and more. 🎂✨
     <br><br>
-    — From your friend, with love 💛
+    — with love 💛
   </p>
 </div>
 """, unsafe_allow_html=True)
