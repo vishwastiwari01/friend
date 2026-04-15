@@ -1,0 +1,339 @@
+import streamlit as st
+import base64
+from pathlib import Path
+import time
+
+# ── Page config ──────────────────────────────────────────────────────────────
+st.set_page_config(
+    page_title="Happy Birthday Kritika 🎂",
+    page_icon="🌸",
+    layout="centered",
+    initial_sidebar_state="collapsed",
+)
+
+# ── Helper: image → base64 ────────────────────────────────────────────────────
+def img_to_b64(path: str) -> str:
+    with open(path, "rb") as f:
+        return base64.b64encode(f.read()).decode()
+
+photo1_b64   = img_to_b64("photo1.jpg")
+photo2_b64   = img_to_b64("photo2.jpg")
+flowers_b64  = img_to_b64("flowers.jpg")
+
+# ── CSS ───────────────────────────────────────────────────────────────────────
+st.markdown(f"""
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Lato:wght@300;400&display=swap');
+
+  /* ── global reset ── */
+  html, body, [data-testid="stAppViewContainer"] {{
+    background: #0d0d0d !important;
+    color: #f5e6d3;
+    font-family: 'Lato', sans-serif;
+  }}
+  [data-testid="stHeader"] {{ background: transparent !important; }}
+  .block-container {{ padding: 0 1rem 4rem 1rem !important; max-width: 760px; margin: auto; }}
+
+  /* ── hero ── */
+  .hero {{
+    text-align: center;
+    padding: 60px 20px 20px;
+    position: relative;
+  }}
+  .hero-flowers {{
+    width: 140px;
+    margin: 0 auto 20px;
+    animation: floatUp 3s ease-in-out infinite;
+  }}
+  @keyframes floatUp {{
+    0%,100% {{ transform: translateY(0); }}
+    50%      {{ transform: translateY(-12px); }}
+  }}
+  .hero h1 {{
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2rem, 7vw, 3.4rem);
+    font-weight: 700;
+    letter-spacing: .04em;
+    color: #f7c5a0;
+    margin: 0 0 6px;
+    line-height: 1.15;
+  }}
+  .hero h2 {{
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.1rem, 4vw, 1.6rem);
+    font-weight: 400;
+    font-style: italic;
+    color: #d4a07a;
+    margin: 0 0 30px;
+  }}
+  .divider {{
+    border: none;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #c27d52, transparent);
+    margin: 30px auto;
+    width: 60%;
+  }}
+
+  /* ── photos ── */
+  .photos-row {{
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: 30px 0;
+  }}
+  .photo-frame {{
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 3px solid #c27d52;
+    box-shadow: 0 0 24px #c27d5240;
+    flex-shrink: 0;
+  }}
+  .photo-frame img {{
+    width: 100%; height: 100%;
+    object-fit: cover;
+    object-position: center top;
+  }}
+
+  /* ── message card ── */
+  .msg-card {{
+    background: #161616;
+    border: 1px solid #2a2a2a;
+    border-radius: 18px;
+    padding: 36px 32px;
+    margin: 30px 0;
+    text-align: center;
+    box-shadow: 0 8px 32px #00000060;
+  }}
+  .msg-card .label {{
+    font-size: .75rem;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: #c27d52;
+    margin-bottom: 14px;
+  }}
+  .msg-card p {{
+    font-size: 1.05rem;
+    line-height: 1.85;
+    color: #e8d5c4;
+    margin: 0;
+  }}
+
+  /* ── reasons grid ── */
+  .reasons-title {{
+    font-family: 'Playfair Display', serif;
+    font-size: 1.7rem;
+    text-align: center;
+    color: #f7c5a0;
+    margin: 40px 0 20px;
+  }}
+  .reason-card {{
+    background: #111;
+    border-left: 3px solid #c27d52;
+    border-radius: 10px;
+    padding: 18px 22px;
+    margin-bottom: 14px;
+  }}
+  .reason-card .r-num {{
+    font-size: .7rem;
+    letter-spacing: .2em;
+    color: #c27d52;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }}
+  .reason-card p {{
+    margin: 0;
+    font-size: .97rem;
+    color: #ddd0c4;
+    line-height: 1.7;
+  }}
+
+  /* ── closing ── */
+  .closing {{
+    text-align: center;
+    padding: 40px 20px 20px;
+  }}
+  .closing .big-heart {{
+    font-size: 3rem;
+    animation: pulse 1.2s ease-in-out infinite;
+  }}
+  @keyframes pulse {{
+    0%,100% {{ transform: scale(1); }}
+    50%      {{ transform: scale(1.2); }}
+  }}
+  .closing h3 {{
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem;
+    color: #f7c5a0;
+    margin: 14px 0 8px;
+  }}
+  .closing p {{
+    color: #aaa;
+    font-size: .92rem;
+    line-height: 1.7;
+  }}
+
+  /* ── confetti canvas ── */
+  #confetti-canvas {{
+    position: fixed; top:0; left:0;
+    width:100%; height:100%;
+    pointer-events: none;
+    z-index: 9999;
+  }}
+</style>
+""", unsafe_allow_html=True)
+
+# ── Confetti script ───────────────────────────────────────────────────────────
+st.markdown("""
+<canvas id="confetti-canvas"></canvas>
+<script>
+(function(){
+  const canvas = document.getElementById('confetti-canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const colors = ['#f7c5a0','#c27d52','#e8d5c4','#fff','#d4a07a','#ff9999'];
+  const pieces = Array.from({length:120},()=>({
+    x: Math.random()*canvas.width,
+    y: Math.random()*canvas.height - canvas.height,
+    r: Math.random()*6+3,
+    d: Math.random()*80+40,
+    color: colors[Math.floor(Math.random()*colors.length)],
+    tilt: Math.random()*10-10,
+    tiltAngle: 0,
+    tiltSpeed: Math.random()*.07+.05
+  }));
+  let angle = 0, stop = false;
+  setTimeout(()=>stop=true, 6000);
+  function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    if(stop){ return; }
+    angle += .01;
+    pieces.forEach(p=>{
+      p.tiltAngle += p.tiltSpeed;
+      p.y += (Math.cos(angle+p.d)+1.5)*1.6;
+      p.x += Math.sin(angle)*1.5;
+      p.tilt = Math.sin(p.tiltAngle)*12;
+      if(p.y > canvas.height){ p.y = -10; p.x = Math.random()*canvas.width; }
+      ctx.beginPath();
+      ctx.lineWidth = p.r/2;
+      ctx.strokeStyle = p.color;
+      ctx.moveTo(p.x+p.tilt+p.r/3, p.y);
+      ctx.lineTo(p.x+p.tilt, p.y+p.tilt+p.r/3);
+      ctx.stroke();
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+</script>
+""", unsafe_allow_html=True)
+
+# ── HERO ─────────────────────────────────────────────────────────────────────
+st.markdown(f"""
+<div class="hero">
+  <img class="hero-flowers"
+       src="data:image/jpg;base64,{flowers_b64}"
+       alt="flowers">
+  <h1>Happy Birthday</h1>
+  <h2>Kritika Tripathi ✨</h2>
+</div>
+""", unsafe_allow_html=True)
+
+# ── Birthday song audio ───────────────────────────────────────────────────────
+st.markdown("""
+<div style="text-align:center; margin-bottom:24px;">
+  <p style="color:#c27d52; font-size:.8rem; letter-spacing:.15em; text-transform:uppercase; margin-bottom:10px;">
+    🎵 Play Birthday Song
+  </p>
+""", unsafe_allow_html=True)
+
+audio_url = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+st.audio("https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3", format="audio/mp3")
+
+st.markdown("""
+  <p style="color:#666; font-size:.78rem; margin-top:6px;">
+    (Press ▶ for the vibe 🎶)
+  </p>
+</div>
+""", unsafe_allow_html=True)
+
+st.markdown('<hr class="divider">', unsafe_allow_html=True)
+
+# ── PHOTOS ────────────────────────────────────────────────────────────────────
+st.markdown(f"""
+<div class="photos-row">
+  <div class="photo-frame">
+    <img src="data:image/jpg;base64,{photo1_b64}" alt="Kritika">
+  </div>
+  <div class="photo-frame">
+    <img src="data:image/jpg;base64,{photo2_b64}" alt="Kritika">
+  </div>
+</div>
+""", unsafe_allow_html=True)
+
+st.markdown('<hr class="divider">', unsafe_allow_html=True)
+
+# ── MAIN MESSAGE ─────────────────────────────────────────────────────────────
+st.markdown("""
+<div class="msg-card">
+  <div class="label">A message for you</div>
+  <p>
+    Hey Kritika! 🌸<br><br>
+    On this beautiful day, just want you to know how glad I am to have you as a friend.
+    Your smile can light up any room, and your kindness makes everything around you better.
+    You deserve all the happiness, laughter, and amazing things life has to offer —
+    today and always.<br><br>
+    Wishing you the most magical birthday ever. May this year bring you everything
+    you've ever wished for and more. 🎂✨
+    <br><br>
+    — From your friend, with love 💛
+  </p>
+</div>
+""", unsafe_allow_html=True)
+
+# ── REASONS (from PDF, reframed as friendship reasons) ────────────────────────
+st.markdown('<div class="reasons-title">10 Things That Make You Special 🌺</div>', unsafe_allow_html=True)
+
+reasons = [
+    ("Your Smile", "Your smile is genuinely one of the most warm and beautiful things — it lights up every conversation and makes everything feel okay."),
+    ("Your Kindness", "You have a heart that's pure and beautiful. Your empathy and care for people around you is something truly rare."),
+    ("Your Strength", "You face challenges with so much grace and courage. You inspire the people around you without even realising it."),
+    ("Making People Better", "Just being around you makes people want to be better — kinder, funnier, more real. That's a gift not everyone has."),
+    ("The Memories", "Every moment we've spent laughing, chatting, and being ridiculous together is a memory I genuinely treasure. 💖"),
+    ("Your Realness", "You're unapologetically yourself — no pretences, no drama. That authenticity is so refreshing and so rare."),
+    ("Your Laugh", "Your laugh is infectious. Once you start, everyone around you can't help but smile too."),
+    ("Your Energy", "You bring this calm yet bright energy to everything. Whether you're happy or just vibing, you make the space better."),
+    ("Your Support", "You show up for the people you care about in ways that really matter. That loyalty is everything."),
+    ("Simply You", "There are so many reasons to celebrate you today, Kritika — but the biggest one is just that you exist and you're you. Happy Birthday! 🎉"),
+]
+
+for i, (title, text) in enumerate(reasons, 1):
+    st.markdown(f"""
+    <div class="reason-card">
+      <div class="r-num">Reason #{i} — {title}</div>
+      <p>{text}</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+st.markdown('<hr class="divider">', unsafe_allow_html=True)
+
+# ── CLOSING ──────────────────────────────────────────────────────────────────
+st.markdown(f"""
+<div class="closing">
+  <img src="data:image/jpg;base64,{flowers_b64}" style="width:100px; opacity:.85; margin-bottom:16px;">
+  <div class="big-heart">🧡</div>
+  <h3>Here's to you, Kritika!</h3>
+  <p>
+    May your birthday be as wonderful as you are.<br>
+    May this year be full of adventures, good food, great laughs,<br>
+    and all the things that make your soul happy.<br><br>
+    You deserve the absolute world. 🌙✨
+  </p>
+  <p style="margin-top:24px; font-size:.82rem; color:#555; letter-spacing:.08em;">
+    Made with love • Happy Birthday 🎂
+  </p>
+</div>
+""", unsafe_allow_html=True)
